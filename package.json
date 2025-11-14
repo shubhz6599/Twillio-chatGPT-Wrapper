@@ -5,18 +5,23 @@
   "scripts": {
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-     "tunnel": "ngrok http 3000"
+    "tunnel": "ngrok http 3000"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google-cloud/text-to-speech": "^6.3.0",
+    "@google/generative-ai": "^0.24.1",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
+    "elevenlabs": "^1.59.0",
     "express": "^5.1.0",
+    "fs": "^0.0.1-security",
     "openai": "^5.19.1",
-    "twilio": "^5.8.2"
+    "twilio": "^5.8.2",
+    "util": "^0.12.5"
   }
 }
