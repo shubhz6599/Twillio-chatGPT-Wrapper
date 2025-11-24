@@ -16,7 +16,7 @@ const http = require("http");
 
 // ---------------- EXPRESS APP ----------------
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
@@ -188,7 +188,7 @@ app.post("/api/ttss", async (req, res) => {
 // ===================================================================
 // START EXPRESS SERVER
 // ===================================================================
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server + WebSocket running on ${PORT}`);
 });
 const REALTIME_URL =
