@@ -177,22 +177,41 @@ app.post("/api/ttss", async (req, res) => {
 //               🔥 REALTIME VOICE-TO-VOICE WEBSOCKET PROXY (FIXED)
 // ===================================================================
 
-/**
- * Realtime WS proxy that:
- *  - Accepts frontend WebSocket connects on port 3001
- *  - For each frontend client, opens a dedicated OpenAI realtime WS
- *  - Buffers client messages until OpenAI WS is open, then flushes
- *  - Forwards binary and JSON messages both ways with safety guards
- */
+// ===================================================================
+//               🚀 RAILWAY-COMPATIBLE WEBSOCKET SETUP
+// ===================================================================
 
-// ===================================================================
-// START EXPRESS SERVER
-// ===================================================================
-const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server + WebSocket running on ${PORT}`);
+// Create HTTP server explicitly for Railway
+const server = http.createServer(app);
+
+// WebSocket server with explicit path for Railway
+const realtimeServer = new WebSocket.Server({ 
+  server, 
+  path: '/realtime'
 });
-const REALTIME_URL =
-  "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17";
+
+// Health check endpoint (required for Railway)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    websocket: true,
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// WebSocket test endpoint
+app.get('/websocket-info', (req, res) => {
+  res.json({
+    websocket: {
+      endpoint: 'wss://twillio-chatgpt-wrapper-production.up.railway.app/realtime',
+      protocol: 'WebSocket',
+      status: 'active'
+    }
+  });
+});
+
+const REALTIME_URL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17";
 
 const ALLOWED_KNOWLEDGE = `
 You are Msetu portal assistant.
@@ -231,7 +250,7 @@ To update your email address:
 2. Go to the Dashboard or Main Menu.
 3. Click on the profile icon at the top-right corner.
 4. In the user details popup, update your email in the Email Address field.
-5. Click “Save Changes”.
+5. Click "Save Changes".
 Your email will be successfully updated.
 
 2) PHONE:
@@ -240,14 +259,14 @@ To update your phone number:
 2. Go to the Dashboard or Main Menu.
 3. Click on the profile icon in the top-right corner.
 4. In the user details popup, update your phone number in the Mobile Number field.
-5. Click “Save Changes”.
+5. Click "Save Changes".
 Your mobile number will be updated.
 
 3) LOGIN:
 To log in to the Msetu Portal:
 1. Open supplier.mahindra.com in your browser.
-2. Select the “Msetu Login” option.
-3. Choose either “M&M User Login” or “Supplier User Login”.
+2. Select the "Msetu Login" option.
+3. Choose either "M&M User Login" or "Supplier User Login".
 4. Follow the on-screen instructions to complete the login process.
 
 4) ASN:
@@ -266,36 +285,29 @@ To create an ASN:
    - Enter * in LR number if not available.
    - Remove packaging material columns if not required.
 9. Save the file in CSV format.
-10. Click “Upload ASN”, then choose the file and upload it.
+10. Click "Upload ASN", then choose the file and upload it.
 Your ASN will be successfully created.
 
 5) GST:
 To check M&M GSTN details:
 1. Log in to the Msetu Portal.
 2. Navigate to the "GST Info" section.
-3. Open the file named “MnM GSTN Numbers.pdf”.
+3. Open the file named "MnM GSTN Numbers.pdf".
 This file contains all official GST details.
 
 6) FORGOT PASSWORD:
 Use the Forgot Password link on the MSetu portal login page to reset your password.
 `;
 
-
-const realtimeServer = new WebSocket.Server({ server }, () => {
-  console.log(`Realtime WS proxy attached to same server`);
-});
-
-
 realtimeServer.on('connection', (clientWs, req) => {
-  console.log('[proxy] Frontend connected:', req.socket.remoteAddress);
+  console.log('[proxy] Frontend connected:', req.url, req.headers.origin);
 
   // Per-connection state
   let openaiWS = null;
   let openaiReady = false;
-  const outboundQueue = []; // queue binary or string messages until OpenAI WS is ready
+  const outboundQueue = [];
   let closed = false;
 
-  // helper to cleanup both sockets
   function cleanup() {
     closed = true;
     try { if (clientWs && clientWs.readyState === WebSocket.OPEN) clientWs.close(); } catch (e) { }
@@ -320,10 +332,8 @@ realtimeServer.on('connection', (clientWs, req) => {
   // When OpenAI WS opens, send initial session.update and flush queue
   openaiWS.on('open', () => {
     console.log('[proxy] OpenAI realtime WS connected for client');
-
     openaiReady = true;
 
-    // send initial session update (adjust as needed)
     const initial = {
       type: "session.update",
       session: {
@@ -345,13 +355,8 @@ FINAL RULES:
 - If the question is unrelated → reply: "I'm sorry, but this question is not related to Msetu."
 - Keep all voice responses short, clear, and professional.
 `
-
-
-
       }
     };
-
-
 
     try {
       openaiWS.send(JSON.stringify(initial));
@@ -378,16 +383,16 @@ FINAL RULES:
 
   openaiWS.on('error', (err) => {
     console.error('[proxy] OpenAI WS error', err);
-    // forward a lightweight error to client
-    try { if (clientWs && clientWs.readyState === WebSocket.OPEN) clientWs.send(JSON.stringify({ type: 'error', message: 'OpenAI WS error' })); } catch (e) { }
+    try { 
+      if (clientWs && clientWs.readyState === WebSocket.OPEN) 
+        clientWs.send(JSON.stringify({ type: 'error', message: 'OpenAI WS error' })); 
+    } catch (e) { }
   });
 
   openaiWS.on('close', (code, reason) => {
     openaiReady = false;
     console.log(`[proxy] OpenAI WS closed (code=${code}) ${reason ? reason.toString() : ''}`);
 
-    // Send a notification to the client, but DO NOT close the client socket here.
-    // Let the client decide when to disconnect (so it can still receive any final forwarded events).
     try {
       if (clientWs && clientWs.readyState === WebSocket.OPEN) {
         clientWs.send(JSON.stringify({
@@ -399,20 +404,13 @@ FINAL RULES:
     } catch (e) {
       console.warn('[proxy] failed to notify client of openai close', e);
     }
-
-    // Do not automatically close clientWs here. Keep it open so the browser can
-    // receive any last messages and user code can decide when to disconnect.
-    // cleanup() will still be called when clientWs.close() happens on the client's side.
   });
-
 
   // Forward OpenAI -> Client (binary or JSON)
   openaiWS.on('message', (data, isBinary) => {
     if (closed) return;
-    // data may be Buffer or string
     try {
       if (clientWs.readyState === WebSocket.OPEN) {
-        // forward as-is
         clientWs.send(data, { binary: isBinary });
       } else {
         console.warn('[proxy] client not open, dropping OpenAI message');
@@ -428,21 +426,16 @@ FINAL RULES:
 
     try {
       if (isBinary || data instanceof Buffer || data instanceof ArrayBuffer) {
-        // Convert binary (ArrayBuffer/Buffer) to base64 string
         let buf;
         if (data instanceof ArrayBuffer) {
           buf = Buffer.from(data);
         } else if (Buffer.isBuffer(data)) {
           buf = data;
         } else {
-          // some environments supply Blob-like objects — try to handle them
           buf = Buffer.from(data);
         }
 
-        // Base64 encode
         const b64 = buf.toString('base64');
-
-        // Build append event
         const appendEvent = JSON.stringify({
           type: "input_audio_buffer.append",
           audio: b64
@@ -451,17 +444,14 @@ FINAL RULES:
         if (openaiReady && openaiWS && openaiWS.readyState === WebSocket.OPEN) {
           openaiWS.send(appendEvent);
         } else {
-          // queue string events (we already support queuing binary; now queue text too)
           if (outboundQueue.length > 2000) outboundQueue.shift();
           outboundQueue.push(appendEvent);
         }
-
         return;
       }
 
-      // Non-binary messages (control JSON strings) — forward as-is to OpenAI
+      // Non-binary messages
       if (typeof data === 'string') {
-        // If client sends control events (e.g. 'commit' from frontend), forward them.
         if (openaiReady && openaiWS && openaiWS.readyState === WebSocket.OPEN) {
           openaiWS.send(data);
         } else {
@@ -474,7 +464,6 @@ FINAL RULES:
     }
   });
 
-
   clientWs.on('close', (code, reason) => {
     console.log(`[proxy] client disconnected (code=${code})`);
     cleanup();
@@ -484,6 +473,21 @@ FINAL RULES:
     console.error('[proxy] client WS error', err);
     cleanup();
   });
+});
 
-}); // realtimeServer.on('connection')
+// ===================================================================
+// START SERVER FOR RAILWAY
+// ===================================================================
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server + WebSocket running on port ${PORT}`);
+  console.log(`🔗 WebSocket endpoint: ws://0.0.0.0:${PORT}/realtime`);
+  console.log(`🌐 Health check: http://0.0.0.0:${PORT}/health`);
+});
 
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+  });
+});
