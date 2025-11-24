@@ -15,10 +15,10 @@ const WebSocket = require('ws'); // Realtime WebSocket
 const http = require('http');
 // ---------------- EXPRESS APP ----------------
 const app = express();
+const server = http.createServer(app);
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-const server = http.createServer(app);
 
 const PORT = process.env.PORT || 3000;
 
@@ -276,8 +276,10 @@ Use the Forgot Password link on the MSetu portal login page to reset your passwo
 `;
 
 
-const realtimeServer = new WebSocket.Server({ server, path: "/realtime" });
-
+const realtimeServer = new WebSocket.Server({
+  server,
+  path: "/realtime"
+});
 
 realtimeServer.on('connection', (clientWs, req) => {
   console.log('[proxy] Frontend connected:', req.socket.remoteAddress);
@@ -483,6 +485,7 @@ FINAL RULES:
 // ===================================================================
 // START EXPRESS SERVER
 // ===================================================================
-app.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log("Server + Realtime WS running on PORT " + PORT);
 });
+
