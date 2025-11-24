@@ -483,6 +483,6 @@ FINAL RULES:
 // ===================================================================
 // START EXPRESS SERVER
 // ===================================================================
-server.listen(PORT, () => {
-  console.log(`Server + Realtime WS running on PORT ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("Server + Realtime WS running on PORT " + PORT);
 });
