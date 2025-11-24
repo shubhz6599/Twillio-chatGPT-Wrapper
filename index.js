@@ -11,7 +11,6 @@ const OpenAI = require('openai');
 const textToSpeech = require('@google-cloud/text-to-speech');
 const fs = require('fs');
 const util = require('util');
-const http = require('http'); 
 const WebSocket = require('ws'); // Realtime WebSocket
 
 // ---------------- EXPRESS APP ----------------
@@ -21,7 +20,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
-const server = http.createServer(app);
 
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const openai = new OpenAI({
@@ -186,7 +184,7 @@ app.post("/api/ttss", async (req, res) => {
  *  - Forwards binary and JSON messages both ways with safety guards
  */
 
-const realtimePath = '/realtime';
+const REALTIME_PORT = 3001;
 const REALTIME_URL =
   "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17";
 
@@ -277,22 +275,8 @@ Use the Forgot Password link on the MSetu portal login page to reset your passwo
 `;
 
 
-const realtimeServer = new WebSocket.Server({
-  noServer: true, // we will handle upgrade manually
-});
-console.log('[proxy] Realtime WS server created (noServer), path=', realtimePath);
-// handle upgrade requests and only accept those with the right path
-server.on('upgrade', (request, socket, head) => {
-  const { url } = request;
-  if (!url || !url.startsWith(realtimePath)) {
-    // Not our path — destroy socket or let other servers handle it
-    socket.destroy();
-    return;
-  }
-
-  realtimeServer.handleUpgrade(request, socket, head, (ws) => {
-    realtimeServer.emit('connection', ws, request);
-  });
+const realtimeServer = new WebSocket.Server({ port: REALTIME_PORT }, () => {
+  console.log(`Realtime WS proxy listening on ws://localhost:${REALTIME_PORT}`);
 });
 
 realtimeServer.on('connection', (clientWs, req) => {
@@ -499,8 +483,4 @@ FINAL RULES:
 // ===================================================================
 // START EXPRESS SERVER
 // ===================================================================
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`[proxy] Realtime WS path available at ws(s)://<your-domain>${realtimePath}`);
-});
-
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
