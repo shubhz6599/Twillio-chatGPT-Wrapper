@@ -273,9 +273,11 @@ This file contains all official GST details.
 6) FORGOT PASSWORD:
 Use the Forgot Password link on the MSetu portal login page to reset your password.
 `;
+const server = app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-
-const realtimeServer = new WebSocket.Server({ port: REALTIME_PORT }, () => {
+const realtimeServer = new WebSocket.Server({ server, path: "/realtime"  }, () => {
   console.log(`Realtime WS proxy listening on ws://localhost:${REALTIME_PORT}`);
 });
 
