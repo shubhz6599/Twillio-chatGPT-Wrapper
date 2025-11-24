@@ -22,6 +22,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // health check
+app.get("/", (req, res) => {
+  res.send("Backend + Realtime WebSocket is running");
+});
+
 app.get('/healthz', (req, res) => res.send({ ok: true }));
 
 const PORT = process.env.PORT || 3000;
