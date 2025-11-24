@@ -185,7 +185,12 @@ app.post("/api/ttss", async (req, res) => {
  *  - Forwards binary and JSON messages both ways with safety guards
  */
 
-const REALTIME_PORT = 3001;
+// ===================================================================
+// START EXPRESS SERVER
+// ===================================================================
+const server = app.listen(PORT, () => {
+  console.log(`Server + WebSocket running on ${PORT}`);
+});
 const REALTIME_URL =
   "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17";
 
@@ -274,12 +279,12 @@ This file contains all official GST details.
 6) FORGOT PASSWORD:
 Use the Forgot Password link on the MSetu portal login page to reset your password.
 `;
-const httpServer = http.createServer(app);
 
 
-const realtimeServer = new WebSocket.Server({ server: httpServer }, () => {
-  console.log(`Realtime WS proxy listening on ws://localhost:${REALTIME_PORT}`);
+const realtimeServer = new WebSocket.Server({ server }, () => {
+  console.log(`Realtime WS proxy attached to same server`);
 });
+
 
 realtimeServer.on('connection', (clientWs, req) => {
   console.log('[proxy] Frontend connected:', req.socket.remoteAddress);
@@ -324,7 +329,7 @@ realtimeServer.on('connection', (clientWs, req) => {
       session: {
         modalities: ["audio", "text"],
         voice: "verse",
-  instructions: `
+        instructions: `
 You are a strict domain-limited voice assistant.
 
 ${ALLOWED_KNOWLEDGE}
@@ -482,9 +487,3 @@ FINAL RULES:
 
 }); // realtimeServer.on('connection')
 
-// ===================================================================
-// START EXPRESS SERVER
-// ===================================================================
-httpServer.listen(PORT, () => {
-  console.log(`HTTP + WS server running on port ${PORT}`);
-});
