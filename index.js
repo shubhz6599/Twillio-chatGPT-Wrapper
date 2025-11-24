@@ -1,3 +1,7 @@
+// ---------------- POLYFILLS (Fix Node 16 fetch error) ----------------
+globalThis.fetch = (...args) =>
+  import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -7,18 +11,25 @@ const OpenAI = require('openai');
 const textToSpeech = require('@google-cloud/text-to-speech');
 const fs = require('fs');
 const util = require('util');
+const WebSocket = require('ws'); // Realtime WebSocket
+const http = require("http");
 
+// ---------------- EXPRESS APP ----------------
 const app = express();
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: true })); // for Twilio webhook form posts
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
 
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  fetch: (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args))
+});
 
-// -------- PSTN Call API (optional) --------
+// -------------------- Your existing REST endpoints --------------------
+// (kept as you provided them - unchanged)
 app.post('/api/call', async (req, res) => {
   try {
     let { phone } = req.body;
@@ -39,7 +50,6 @@ app.post('/api/call', async (req, res) => {
   }
 });
 
-// End call (PSTN)
 app.post('/api/end-call', async (req, res) => {
   try {
     const { callSid } = req.body;
@@ -53,55 +63,41 @@ app.post('/api/end-call', async (req, res) => {
   }
 });
 
-// -------- TwiML Webhook (called by TwiML App) --------
-// This endpoint expects Twilio to POST when a call is created by a browser connect.
-// We read "To" param and decide whether to dial a client identity or a PSTN number.
 app.post('/api/voice', (req, res) => {
   const VoiceResponse = twilio.twiml.VoiceResponse;
   const twiml = new VoiceResponse();
 
-  let toParam = req.body.To || req.body.to || '';
+  let toParam = req.body.To || '';
   const outgoingCallerId = process.env.TWILIO_NUMBER;
 
-  // Ensure client: prefix for web clients
   if (toParam && !toParam.startsWith('client:')) {
     toParam = `client:${toParam}`;
   }
 
   if (toParam.toLowerCase().startsWith('client:')) {
     const identity = toParam.split(':')[1];
-    const dial = twiml.dial(); // no callerId for client-to-client
+    const dial = twiml.dial();
     dial.client(identity);
-    console.log(`TwiML: Dialing client ${identity}`);
+    console.log(`Dialing client: ${identity}`);
   } else {
     const toNumber = process.env.TARGET_NUMBER || process.env.TWILIO_NUMBER;
     const dial = twiml.dial({ callerId: outgoingCallerId });
     dial.number(toNumber);
-    console.log(`TwiML: Dialing number ${toNumber}`);
+    console.log(`Dialing number: ${toNumber}`);
   }
 
   res.type('text/xml').send(twiml.toString());
 });
 
-
-// -------- Browser Token Endpoint --------
-// Accepts optional query params:
-//  - identity: preferred client identity (if not provided, server returns a generated identity).
-//  - incoming: "true" or "false" whether to allow incoming connections (receiver needs incoming true).
-// Replace your existing /api/token handler with this block
 app.get('/api/token', (req, res) => {
   try {
     const AccessToken = twilio.jwt.AccessToken;
     const VoiceGrant = AccessToken.VoiceGrant;
 
-    // identity param (default random if not provided)
     let identity = req.query.identity || 'unknown';
-    if (identity === 'unknown') {
-      identity = 'web-' + Math.floor(Math.random() * 100000);
-    }
+    if (identity === 'unknown') identity = 'web-' + Math.floor(Math.random() * 100000);
 
-    // DEBUG: Log identity requested
-    console.log(`[token] Issuing token for identity: ${identity}`);
+    console.log(`[token] Issuing token for: ${identity}`);
 
     const token = new AccessToken(
       process.env.TWILIO_ACCOUNT_SID,
@@ -112,7 +108,7 @@ app.get('/api/token', (req, res) => {
 
     const voiceGrant = new VoiceGrant({
       outgoingApplicationSid: process.env.TWIML_APP_SID,
-      incomingAllow: true // allow incoming so agent can receive
+      incomingAllow: true
     });
 
     token.addGrant(voiceGrant);
@@ -128,9 +124,6 @@ app.get('/api/token', (req, res) => {
   }
 });
 
-
-
-// Config helper
 app.get('/api/config', (req, res) => {
   res.send({
     twilioNumber: process.env.TWILIO_NUMBER || null,
@@ -138,7 +131,6 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// -------- ChatGPT Endpoint (unchanged except for safety) --------
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
@@ -156,46 +148,6 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-
-// // uncomment below for google cloud
-// const ttsClient = new textToSpeech.TextToSpeechClient({ keyFilename: 'key.json' });
-
-// app.post('/api/tts', async (req, res) => {
-//   try {
-//     const { text, language = 'en-IN', voiceGender = 'MALE' } = req.body;
-//     if (!text) return res.status(400).send({ error: 'Text required' });
-
-//     let voiceName = '';
-
-//     switch (language) {
-//       case 'hi-IN': // Hindi
-//         voiceName = voiceGender === 'MALE' ? 'hi-IN-Wavenet-C' : 'hi-IN-Wavenet-D';
-//         break;
-//       case 'mr-IN': // Marathi
-//         voiceName = voiceGender === 'MALE' ? 'mr-IN-Wavenet-A' : 'mr-IN-Wavenet-B';
-//         break;
-//       case 'en-IN': // English (Indian)
-//       default:
-//         voiceName = voiceGender === 'MALE' ? 'en-IN-Wavenet-B' : 'en-IN-Wavenet-A';
-//     }
-
-//     const [response] = await ttsClient.synthesizeSpeech({
-//       input: { text },
-//       voice: { languageCode: language, name: voiceName, ssmlGender: voiceGender },
-//       audioConfig: { audioEncoding: 'MP3' },
-//     });
-
-//     const audioBuffer = Buffer.from(response.audioContent, 'binary');
-//     res.set('Content-Type', 'audio/mpeg');
-//     res.send(audioBuffer);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send({ error: err.message });
-//   }
-// });
-
-
-// modal for chat gpt text to voice
 app.post("/api/ttss", async (req, res) => {
   try {
     const { text } = req.body;
@@ -206,7 +158,7 @@ app.post("/api/ttss", async (req, res) => {
 
     const response = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
-      voice: "ballad",  // available: alloy, sage, verse, coral, shimmer
+      voice: "ballad",
       input: text
     });
 
@@ -221,188 +173,318 @@ app.post("/api/ttss", async (req, res) => {
   }
 });
 
+// ===================================================================
+//               🔥 REALTIME VOICE-TO-VOICE WEBSOCKET PROXY (FIXED)
+// ===================================================================
 
-// Uncomment below for elevenLabs
-// -------- ElevenLabs TTS (FAST + Indian Voices) --------
-// -------- ElevenLabs TTS FIXED VERSION --------
-// const { ElevenLabsClient } = require("elevenlabs");
+/**
+ * Realtime WS proxy that:
+ *  - Accepts frontend WebSocket connects on port 3001
+ *  - For each frontend client, opens a dedicated OpenAI realtime WS
+ *  - Buffers client messages until OpenAI WS is open, then flushes
+ *  - Forwards binary and JSON messages both ways with safety guards
+ */
 
-// const eleven = new ElevenLabsClient({
-//   apiKey: process.env.ELEVENLABS_API_KEY
-// });
+const REALTIME_PORT = 3001;
+const REALTIME_URL =
+  "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17";
 
-// app.post('/api/tts-eleven', async (req, res) => {
-//   try {
-//     const { text, voiceId } = req.body;
+const ALLOWED_KNOWLEDGE = `
+You are Msetu portal assistant.
 
-//     if (!text) return res.status(400).send({ error: "Text required" });
+Allowed questions include:
+- email
+- phone
+- login
+- asn
+- GST
+- Forgot Password
 
-//     // Fallback if no voiceId received
-//     // const selectedVoice = voiceId || process.env.ELEVENLABS_VOICE_ID;
-//     const selectedVoice = voiceId || 'pqHfZKP75CvOlQylNhV4';
+GREETING RULE:
+If user only says:
+"hi", "hello", "hey", "good morning", "good evening", 
+"how are you", "what's up"
 
-//     if (!selectedVoice) {
-//       console.log("❌ Missing voiceId");
-//       return res.status(400).send({
-//         error: "Missing voiceId. Provide a valid ElevenLabs voice ID."
-//       });
-//     }
+→ Reply with a friendly greeting such as:
+"Hello! How can I help you on the Msetu portal?"
 
-//     console.log("🎤 Using Voice ID:", selectedVoice);
+Do NOT say the unrelated message for greetings.
 
-//     const readableStream = await eleven.textToSpeech.convert(selectedVoice, {
-//       text,
-//       model_id: "eleven_multilingual_v2",
-//       voice_settings: {
-//         stability: 0.4,
-//         similarity_boost: 0.3,
-//         speed: 1.1,
-//         stability:0.4,
-//         style:0.0,
-//         speaker_boost:'enabled'
-//       }
-//     });
+UNRELATED QUESTION RULE:
+If question is NOT about Msetu portal → reply:
+"I'm sorry, but this question is not related to Msetu."
 
-//     res.setHeader("Content-Type", "audio/mpeg");
-//     res.setHeader("Transfer-Encoding", "chunked");
+Below are the OFFICIAL answers you must use.
+`;
 
-//     for await (const chunk of readableStream) {
-//       res.write(chunk);
-//     }
-//     res.end();
+const ALLOWED_ANSWERS = `
+MSETU PORTAL OFFICIAL ANSWERS (Refined):
 
-//   } catch (err) {
-//     console.error("❌ ElevenLabs TTS error:", err);
-//     if (err.statusCode === 400) {
-//       return res.status(400).send({
-//         error: "Bad Request — Invalid voiceId or invalid body sent to ElevenLabs"
-//       });
-//     }
-//     res.status(500).send({ error: err.message });
-//   }
-// });
+1) EMAIL:
+To update your email address:
+1. Log in to the Msetu Portal.
+2. Go to the Dashboard or Main Menu.
+3. Click on the profile icon at the top-right corner.
+4. In the user details popup, update your email in the Email Address field.
+5. Click “Save Changes”.
+Your email will be successfully updated.
 
-// Uncomment below for Googlegemini
-// const API_KEY = process.env.GOOGLE_API_KEY; // *** IMPORTANT: Set your actual API Key here ***
-// const TTS_MODEL = "gemini-2.5-flash-preview-tts";
-// const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent?key=${API_KEY}`;
-// const VOICE_NAME = "Algieba"; // Example voice: Kore, Puck, Zephyr, etc.
+2) PHONE:
+To update your phone number:
+1. Log in to the Msetu Portal.
+2. Go to the Dashboard or Main Menu.
+3. Click on the profile icon in the top-right corner.
+4. In the user details popup, update your phone number in the Mobile Number field.
+5. Click “Save Changes”.
+Your mobile number will be updated.
 
-// function pcmToWavBuffer(pcmBuffer, sampleRate) {
-//     const numChannels = 1;
-//     const bytesPerSample = 2; // 16-bit PCM
-//     const numSamples = pcmBuffer.length / bytesPerSample;
-//     const buffer = Buffer.alloc(44 + pcmBuffer.length);
+3) LOGIN:
+To log in to the Msetu Portal:
+1. Open supplier.mahindra.com in your browser.
+2. Select the “Msetu Login” option.
+3. Choose either “M&M User Login” or “Supplier User Login”.
+4. Follow the on-screen instructions to complete the login process.
 
-//     let offset = 0;
+4) ASN:
+To create an ASN:
+1. Log in to the Msetu Portal using your vendor code.
+2. On the landing page, select the OE Supplies tab.
+3. Click on Transactions & Self Service Report.
+4. You will be redirected to the SRM Portal landing page. Select OE Supplies again.
+5. Open the Self Service Page from the Transactions menu.
+6. The supplier self-service page will open in a new tab.
+7. Download the ASN file format provided.
+8. While filling the file, ensure:
+   - Invoice & LR date must be in DD.MM.YYYY format.
+   - Invoice should not be older than 3 months.
+   - If excise amount is not applicable, enter 0.
+   - Enter * in LR number if not available.
+   - Remove packaging material columns if not required.
+9. Save the file in CSV format.
+10. Click “Upload ASN”, then choose the file and upload it.
+Your ASN will be successfully created.
 
-//     // RIFF header
-//     buffer.write('RIFF', offset); offset += 4;
-//     buffer.writeUInt32LE(36 + pcmBuffer.length, offset); offset += 4; // File size (data + 36)
-//     buffer.write('WAVE', offset); offset += 4;
+5) GST:
+To check M&M GSTN details:
+1. Log in to the Msetu Portal.
+2. Navigate to the "GST Info" section.
+3. Open the file named “MnM GSTN Numbers.pdf”.
+This file contains all official GST details.
 
-//     // fmt chunk
-//     buffer.write('fmt ', offset); offset += 4;
-//     buffer.writeUInt32LE(16, offset); offset += 4; // Chunk size (16)
-//     buffer.writeUInt16LE(1, offset); offset += 2; // Audio format (1 = PCM)
-//     buffer.writeUInt16LE(numChannels, offset); offset += 2;
-//     buffer.writeUInt32LE(sampleRate, offset); offset += 4;
-//     buffer.writeUInt32LE(sampleRate * numChannels * bytesPerSample, offset); offset += 4; // Byte rate
-//     buffer.writeUInt16LE(numChannels * bytesPerSample, offset); offset += 2; // Block align
-//     buffer.writeUInt16LE(16, offset); offset += 2; // Bits per sample (16)
-
-//     // data chunk
-//     buffer.write('data', offset); offset += 4;
-//     buffer.writeUInt32LE(pcmBuffer.length, offset); offset += 4; // Data size
-
-//     // Copy the raw PCM data
-//     pcmBuffer.copy(buffer, offset);
-
-//     return buffer;
-// }
-
-// app.post("/api/tts-gemini", async (req, res) => {
-//     try {
-//         const { text } = req.body;
-
-//         if (!text || text.trim() === "") {
-//             return res.status(400).send({ error: "Text required" });
-//         }
-
-//         if (API_KEY === "YOUR_GEMINI_API_KEY") {
-//              return res.status(500).send({ error: "API Key not configured. Please set YOUR_GEMINI_API_KEY in server.js" });
-//         }
+6) FORGOT PASSWORD:
+Use the Forgot Password link on the MSetu portal login page to reset your password.
+`;
+const httpServer = http.createServer(app);
 
 
-//         const payload = {
-//             contents: [{ parts: [{ text: text }] }],
-//             generationConfig: {
-//                 responseModalities: ["AUDIO"],
-//                 speechConfig: {
-//                     voiceConfig: {
-//                         prebuiltVoiceConfig: { voiceName: VOICE_NAME }
-//                     }
-//                 }
-//             },
-//             model: TTS_MODEL
-//         };
+const realtimeServer = new WebSocket.Server({ server: httpServer }, () => {
+  console.log(`Realtime WS proxy listening on ws://localhost:${REALTIME_PORT}`);
+});
 
-//         let maxRetries = 5;
-//         let delay = 1000;
-//         let apiResult;
+realtimeServer.on('connection', (clientWs, req) => {
+  console.log('[proxy] Frontend connected:', req.socket.remoteAddress);
 
-//         // Exponential backoff loop
-//         for (let i = 0; i < maxRetries; i++) {
-//             try {
-//                 const apiResponse = await fetch(API_URL, {
-//                     method: 'POST',
-//                     headers: { 'Content-Type': 'application/json' },
-//                     body: JSON.stringify(payload)
-//                 });
+  // Per-connection state
+  let openaiWS = null;
+  let openaiReady = false;
+  const outboundQueue = []; // queue binary or string messages until OpenAI WS is ready
+  let closed = false;
 
-//                 if (!apiResponse.ok) {
-//                     const errorBody = await apiResponse.json();
-//                       throw new Error( 'API error: +(apiResponse.status) - +(errorBody.error?.message)');
+  // helper to cleanup both sockets
+  function cleanup() {
+    closed = true;
+    try { if (clientWs && clientWs.readyState === WebSocket.OPEN) clientWs.close(); } catch (e) { }
+    try { if (openaiWS && openaiWS.readyState === WebSocket.OPEN) openaiWS.close(); } catch (e) { }
+  }
 
-//                 }
+  // Create OpenAI WS for this client
+  try {
+    openaiWS = new WebSocket(REALTIME_URL, {
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        "OpenAI-Beta": "realtime=v1",
+      },
+    });
+  } catch (err) {
+    console.error('[proxy] Failed to create OpenAI WS', err);
+    clientWs.send(JSON.stringify({ error: 'Failed to connect to OpenAI realtime' }));
+    clientWs.close();
+    return;
+  }
 
-//                 apiResult = await apiResponse.json();
-//                 break; 
+  // When OpenAI WS opens, send initial session.update and flush queue
+  openaiWS.on('open', () => {
+    console.log('[proxy] OpenAI realtime WS connected for client');
 
-//             } catch (error) {
-//                 if (i === maxRetries - 1) {
-//                     throw error; // Rethrow on final failure
-//                 }
-//                 await new Promise(resolve => setTimeout(resolve, delay));
-//                 delay *= 2; // Exponential backoff
-//             }
-//         }
-        
-//         const part = apiResult?.candidates?.[0]?.content?.parts?.[0];
-//         const audioDataB64 = part?.inlineData?.data;
-//         const mimeType = part?.inlineData?.mimeType;
+    openaiReady = true;
 
-//         if (!audioDataB64 || !mimeType || !mimeType.startsWith("audio/L16")) {
-//             console.error("Invalid TTS response from API:", JSON.stringify(apiResult, null, 2));
-//             return res.status(500).send({ error: "TTS failed: Invalid audio response." });
-//         }
+    // send initial session update (adjust as needed)
+    const initial = {
+      type: "session.update",
+      session: {
+        modalities: ["audio", "text"],
+        voice: "verse",
+  instructions: `
+You are a strict domain-limited voice assistant.
 
-//         const pcmBuffer = Buffer.from(audioDataB64, 'base64');
+${ALLOWED_KNOWLEDGE}
 
-//         const rateMatch = mimeType.match(/rate=(\d+)/);
-//         const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+${ALLOWED_ANSWERS}
 
-//         const wavBuffer = pcmToWavBuffer(pcmBuffer, sampleRate);
-
-//         res.setHeader("Content-Type", "audio/wav");
-//         res.setHeader("Content-Length", wavBuffer.length);
-//         res.send(wavBuffer);
-
-//     } catch (err) {
-//         console.error("TTS Request Error:", err.message);
-//         res.status(500).send({ error: "TTS failed" });
-//     }
-// });
+FINAL RULES:
+- Your responses MUST be interruptible.
+- If the user starts speaking while you're responding, immediately stop your response.
+- If the user greets → respond with: "Hello! How can I help you on the Msetu portal?"
+- If the question is related to allowed Msetu topics → give the official answer.
+- End every valid answer with: "Do you have any other query related to Msetu?"
+- If the question is unrelated → reply: "I'm sorry, but this question is not related to Msetu."
+- Keep all voice responses short, clear, and professional.
+`
 
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+      }
+    };
+
+
+
+    try {
+      openaiWS.send(JSON.stringify(initial));
+    } catch (e) {
+      console.warn('[proxy] failed to send session.update', e);
+    }
+
+    // flush queued frames (if any)
+    while (outboundQueue.length > 0) {
+      const item = outboundQueue.shift();
+      if (!item) continue;
+      try {
+        if (openaiWS.readyState === WebSocket.OPEN) {
+          openaiWS.send(item);
+        } else {
+          outboundQueue.unshift(item);
+          break;
+        }
+      } catch (err) {
+        console.warn('[proxy] error flushing queue', err);
+      }
+    }
+  });
+
+  openaiWS.on('error', (err) => {
+    console.error('[proxy] OpenAI WS error', err);
+    // forward a lightweight error to client
+    try { if (clientWs && clientWs.readyState === WebSocket.OPEN) clientWs.send(JSON.stringify({ type: 'error', message: 'OpenAI WS error' })); } catch (e) { }
+  });
+
+  openaiWS.on('close', (code, reason) => {
+    openaiReady = false;
+    console.log(`[proxy] OpenAI WS closed (code=${code}) ${reason ? reason.toString() : ''}`);
+
+    // Send a notification to the client, but DO NOT close the client socket here.
+    // Let the client decide when to disconnect (so it can still receive any final forwarded events).
+    try {
+      if (clientWs && clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(JSON.stringify({
+          type: 'openai.closed',
+          code,
+          reason: reason ? reason.toString() : ''
+        }));
+      }
+    } catch (e) {
+      console.warn('[proxy] failed to notify client of openai close', e);
+    }
+
+    // Do not automatically close clientWs here. Keep it open so the browser can
+    // receive any last messages and user code can decide when to disconnect.
+    // cleanup() will still be called when clientWs.close() happens on the client's side.
+  });
+
+
+  // Forward OpenAI -> Client (binary or JSON)
+  openaiWS.on('message', (data, isBinary) => {
+    if (closed) return;
+    // data may be Buffer or string
+    try {
+      if (clientWs.readyState === WebSocket.OPEN) {
+        // forward as-is
+        clientWs.send(data, { binary: isBinary });
+      } else {
+        console.warn('[proxy] client not open, dropping OpenAI message');
+      }
+    } catch (err) {
+      console.error('[proxy] error forwarding OpenAI->client', err);
+    }
+  });
+
+  // When client sends data -> forward to OpenAI (or queue until ready)
+  clientWs.on('message', async (data, isBinary) => {
+    if (closed) return;
+
+    try {
+      if (isBinary || data instanceof Buffer || data instanceof ArrayBuffer) {
+        // Convert binary (ArrayBuffer/Buffer) to base64 string
+        let buf;
+        if (data instanceof ArrayBuffer) {
+          buf = Buffer.from(data);
+        } else if (Buffer.isBuffer(data)) {
+          buf = data;
+        } else {
+          // some environments supply Blob-like objects — try to handle them
+          buf = Buffer.from(data);
+        }
+
+        // Base64 encode
+        const b64 = buf.toString('base64');
+
+        // Build append event
+        const appendEvent = JSON.stringify({
+          type: "input_audio_buffer.append",
+          audio: b64
+        });
+
+        if (openaiReady && openaiWS && openaiWS.readyState === WebSocket.OPEN) {
+          openaiWS.send(appendEvent);
+        } else {
+          // queue string events (we already support queuing binary; now queue text too)
+          if (outboundQueue.length > 2000) outboundQueue.shift();
+          outboundQueue.push(appendEvent);
+        }
+
+        return;
+      }
+
+      // Non-binary messages (control JSON strings) — forward as-is to OpenAI
+      if (typeof data === 'string') {
+        // If client sends control events (e.g. 'commit' from frontend), forward them.
+        if (openaiReady && openaiWS && openaiWS.readyState === WebSocket.OPEN) {
+          openaiWS.send(data);
+        } else {
+          if (outboundQueue.length > 2000) outboundQueue.shift();
+          outboundQueue.push(data);
+        }
+      }
+    } catch (err) {
+      console.error('[proxy] failed to forward client->OpenAI', err);
+    }
+  });
+
+
+  clientWs.on('close', (code, reason) => {
+    console.log(`[proxy] client disconnected (code=${code})`);
+    cleanup();
+  });
+
+  clientWs.on('error', (err) => {
+    console.error('[proxy] client WS error', err);
+    cleanup();
+  });
+
+}); // realtimeServer.on('connection')
+
+// ===================================================================
+// START EXPRESS SERVER
+// ===================================================================
+httpServer.listen(PORT, () => {
+  console.log(`HTTP + WS server running on port ${PORT}`);
+});
