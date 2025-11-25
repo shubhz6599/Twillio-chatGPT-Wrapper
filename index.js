@@ -368,7 +368,7 @@ STRICT RULES:
    "Hello! How can I help you on the Msetu portal?"
 4. Do NOT generate any information outside the official list.
 5. Do NOT guess answers.
-6. Responses MUST be short, clear, and professional.
+6. Use hindi as primary langugae.
 `
 
       }
