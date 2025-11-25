@@ -15,6 +15,8 @@ const WebSocket = require('ws'); // Realtime WebSocket
 
 // ---------------- EXPRESS APP ----------------
 const app = express();
+const server = require('http').createServer(app);
+
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -275,9 +277,9 @@ Use the Forgot Password link on the MSetu portal login page to reset your passwo
 `;
 
 
-const realtimeServer = new WebSocket.Server({ port: REALTIME_PORT }, () => {
-  console.log(`Realtime WS proxy listening on ws://localhost:${REALTIME_PORT}`);
-});
+const realtimeServer = new WebSocket.Server({ server, path: '/realtime' });
+
+
 
 realtimeServer.on('connection', (clientWs, req) => {
   console.log('[proxy] Frontend connected:', req.socket.remoteAddress);
@@ -321,7 +323,7 @@ realtimeServer.on('connection', (clientWs, req) => {
       type: "session.update",
       session: {
         modalities: ["audio", "text"],
-        voice: "verse",
+        voice: "alloy_female",
   instructions: `
 You are a strict domain-limited voice assistant.
 
@@ -331,6 +333,8 @@ ${ALLOWED_ANSWERS}
 
 FINAL RULES:
 - Your responses MUST be interruptible.
+- Respond in the same language the user is speaking.
+- Prefer Hindi as primary language.
 - If the user starts speaking while you're responding, immediately stop your response.
 - If the user greets → respond with: "Hello! How can I help you on the Msetu portal?"
 - If the question is related to allowed Msetu topics → give the official answer.
@@ -483,4 +487,4 @@ FINAL RULES:
 // ===================================================================
 // START EXPRESS SERVER
 // ===================================================================
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
