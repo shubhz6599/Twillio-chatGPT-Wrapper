@@ -200,6 +200,10 @@ Allowed questions include:
 - asn
 - GST
 - Forgot Password
+- po report
+- purchase order report
+- payment report
+
 
 GREETING RULE:
 If user only says:
@@ -274,6 +278,32 @@ This file contains all official GST details.
 
 6) FORGOT PASSWORD:
 Use the Forgot Password link on the MSetu portal login page to reset your password.
+
+7) PO REPORT:
+To get the Purchase Order (PO) report:
+1. Go to the main Msetu chatbot.
+2. Type “PO Report”.
+3. The chatbot will ask you to enter your vendor code.
+4. Enter your vendor code and press Enter.
+Your PO report will be successfully obtained.
+
+8) PURCHASE ORDER REPORT:
+To get the Purchase Order report:
+1. Open the main Msetu chatbot.
+2. Type “PO Report” or “Purchase Order Report”.
+3. The chatbot will ask you to enter your vendor code.
+4. Enter your vendor code and press Enter.
+Your Purchase Order report will be successfully generated.
+
+9) PAYMENT REPORT:
+To get the Payment Report:
+1. Go to the main Msetu chatbot.
+2. Type “Payment Report”.
+3. The chatbot will ask you to select a date range.
+4. Enter the required date range and press Enter.
+Your Payment Report for the selected period will be successfully generated.
+
+
 `;
 
 
@@ -319,34 +349,42 @@ realtimeServer.on('connection', (clientWs, req) => {
     openaiReady = true;
 
     // send initial session update (adjust as needed)
-    const initial = {
-      type: "session.update",
-      session: {
-        modalities: ["audio", "text"],
-        voice: "alloy_female",
-  instructions: `
-You are a strict domain-limited voice assistant.
+   const initial = {
+  type: "session.update",
+  session: {
+    modalities: ["audio", "text"],
+    voice: "shimmer",
+    instructions: `
+आप एक कड़ाई से विषय-सीमित Msetu वॉइस असिस्टेंट हैं। 
 
-${ALLOWED_KNOWLEDGE}
+आप केवल निम्नलिखित विषयों पर जवाब देंगे:
+- ईमेल (email)
+- फोन नंबर (phone)
+- लॉगिन (login)
+- ASN
+- GST
+- पासवर्ड भूल गए (Forgot Password)
+- PO रिपोर्ट
+- Purchase Order रिपोर्ट
+- Payment रिपोर्ट
 
-${ALLOWED_ANSWERS}
+नियम:
 
-FINAL RULES:
-- Your responses MUST be interruptible.
-- Respond in the same language the user is speaking.
-- Prefer Hindi as primary language.
-- If the user starts speaking while you're responding, immediately stop your response.
-- If the user greets → respond with: "Hello! How can I help you on the Msetu portal?"
-- If the question is related to allowed Msetu topics → give the official answer.
-- End every valid answer with: "Do you have any other query related to Msetu?"
-- If the question is unrelated → reply: "I'm sorry, but this question is not related to Msetu."
-- Keep all voice responses short, clear, and professional.
+1. उपयोगकर्ता की बधाई (hi, hello, good morning आदि) पर जवाब दें: 
+"नमस्ते! मैं Msetu पोर्टल पर आपकी कैसे मदद कर सकता हूँ?"
+
+2. यदि उपयोगकर्ता किसी अनुमत विषय पर सवाल पूछता है, तो आधिकारिक उत्तर दें।  
+3. यदि उपयोगकर्ता अनुमत विषयों के बाहर कोई सवाल पूछे, तो जवाब दें:  
+"आपका प्रश्न Msetu से संबंधित नहीं है।"
+
+4. सभी जवाब छोटे, स्पष्ट और पेशेवर हों।  
+5. जब उपयोगकर्ता बात कर रहा हो, तुरंत प्रतिक्रिया रोक दें।  
+6. उत्तर हमेशा हिंदी में प्राथमिकता के साथ दें।  
+7. हर वैध उत्तर के अंत में पूछें: "क्या आपका Msetu से संबंधित कोई अन्य प्रश्न है?"  
 `
+  }
+};
 
-
-
-      }
-    };
 
 
 
