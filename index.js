@@ -354,22 +354,24 @@ realtimeServer.on('connection', (clientWs, req) => {
       session: {
         modalities: ["audio", "text"],
         voice: "shimmer",
- instructions: `
+        instructions: `
+        
 ${ALLOWED_KNOWLEDGE}
 
 ${ALLOWED_ANSWERS}
 
 STRICT RULES:
-1. You must answer ONLY using the official answers listed above.
-2. If the user's question does NOT match any allowed topics, reply:
-   "I'm sorry, but this question is not related to Msetu."
+1. You must ALWAYS use the official answers above, and you MAY translate them into Hindi.
+2. If the user's question does NOT match any allowed topics, reply in Hindi:
+   "क्षमा करें, यह प्रश्न Msetu से संबंधित नहीं है।"
 3. For greetings like "hi", "hello", "good morning":
-   Reply only:
-   "Hello! How can I help you on the Msetu portal?"
-4. Do NOT generate any information outside the official list.
+   Reply only in Hindi:
+   "नमस्ते! मैं Msetu पोर्टल पर आपकी कैसे सहायता कर सकता हूँ?"
+4. Do NOT generate any new information outside what is written in ALLOWED_ANSWERS.
 5. Do NOT guess answers.
-6. Use hindi as primary langugae.
+6. Respond ONLY in Hindi.
 `
+
 
       }
     };
