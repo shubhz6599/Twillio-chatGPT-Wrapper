@@ -191,8 +191,6 @@ const REALTIME_URL =
   "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17";
 
 const ALLOWED_KNOWLEDGE = `
-You are Msetu portal assistant.
-
 Allowed questions include:
 - email
 - phone
@@ -203,108 +201,90 @@ Allowed questions include:
 - po report
 - purchase order report
 - payment report
-
-
-GREETING RULE:
-If user only says:
-"hi", "hello", "hey", "good morning", "good evening", 
-"how are you", "what's up"
-
-→ Reply with a friendly greeting such as:
-"Hello! How can I help you on the Msetu portal?"
-
-Do NOT say the unrelated message for greetings.
-
-UNRELATED QUESTION RULE:
-If question is NOT about Msetu portal → reply:
-"I'm sorry, but this question is not related to Msetu."
-
-Below are the OFFICIAL answers you must use.
 `;
 
 const ALLOWED_ANSWERS = `
-MSETU PORTAL OFFICIAL ANSWERS (Refined):
+MSETU PORTAL OFFICIAL ANSWERS (Refined)
 
-1) EMAIL:
-To update your email address:
-1. Log in to the Msetu Portal.
-2. Go to the Dashboard or Main Menu.
-3. Click on the profile icon at the top-right corner.
-4. In the user details popup, update your email in the Email Address field.
-5. Click “Save Changes”.
-Your email will be successfully updated.
+1) EMAIL
+To update your email address
+Step 1 Log in to the Msetu Portal
+Step 2 Go to the Dashboard or Main Menu
+Step 3 Click on the profile icon at the top right corner
+Step 4 In the user details popup update your email in the Email Address field
+Step 5 Click Save Changes
+Your email will be successfully updated
 
-2) PHONE:
-To update your phone number:
-1. Log in to the Msetu Portal.
-2. Go to the Dashboard or Main Menu.
-3. Click on the profile icon in the top-right corner.
-4. In the user details popup, update your phone number in the Mobile Number field.
-5. Click “Save Changes”.
-Your mobile number will be updated.
+2) PHONE
+To update your phone number
+Step 1 Log in to the Msetu Portal
+Step 2 Go to the Dashboard or Main Menu
+Step 3 Click on the profile icon in the top right corner
+Step 4 In the user details popup update your phone number in the Mobile Number field
+Step 5 Click Save Changes
+Your mobile number will be updated
 
-3) LOGIN:
-To log in to the Msetu Portal:
-1. Open supplier.mahindra.com in your browser.
-2. Select the “Msetu Login” option.
-3. Choose either “M&M User Login” or “Supplier User Login”.
-4. Follow the on-screen instructions to complete the login process.
+3) LOGIN
+To log in to the Msetu Portal
+Step 1 Open supplier dot mahindra dot com in your browser
+Step 2 Select the Msetu Login option
+Step 3 Choose either M&M User Login or Supplier User Login
+Step 4 Follow the onscreen instructions to complete the login process
 
-4) ASN:
-To create an ASN:
-1. Log in to the Msetu Portal using your vendor code.
-2. On the landing page, select the OE Supplies tab.
-3. Click on Transactions & Self Service Report.
-4. You will be redirected to the SRM Portal landing page. Select OE Supplies again.
-5. Open the Self Service Page from the Transactions menu.
-6. The supplier self-service page will open in a new tab.
-7. Download the ASN file format provided.
-8. While filling the file, ensure:
-   - Invoice & LR date must be in DD.MM.YYYY format.
-   - Invoice should not be older than 3 months.
-   - If excise amount is not applicable, enter 0.
-   - Enter * in LR number if not available.
-   - Remove packaging material columns if not required.
-9. Save the file in CSV format.
-10. Click “Upload ASN”, then choose the file and upload it.
-Your ASN will be successfully created.
+4) ASN
+To create an ASN
+Step 1 Log in to the Msetu Portal using your vendor code
+Step 2 On the landing page select the OE Supplies tab
+Step 3 Click on Transactions and Self Service Report
+Step 4 You will be redirected to the SRM Portal landing page Select OE Supplies again
+Step 5 Open the Self Service Page from the Transactions menu
+Step 6 The supplier self service page will open in a new tab
+Step 7 Download the ASN file format provided
+Step 8 While filling the file ensure
+   - Invoice and LR date must be in DDMMYYYY format
+   - Invoice should not be older than 3 months
+   - If excise amount is not applicable enter 0
+   - Enter dash in LR number if not available
+   - Remove packaging material columns if not required
+Step 9 Save the file in CSV format
+Step 10 Click Upload ASN then choose the file and upload it
+Your ASN will be successfully created
 
-5) GST:
-To check M&M GSTN details:
-1. Log in to the Msetu Portal.
-2. Navigate to the "GST Info" section.
-3. Open the file named “MnM GSTN Numbers.pdf”.
-This file contains all official GST details.
+5) GST
+To check M&M GSTN details
+Step 1 Log in to the Msetu Portal
+Step 2 Navigate to the GST Info section
+Step 3 Open the file named MnM GSTN Numbers PDF
+This file contains all official GST details
 
-6) FORGOT PASSWORD:
-Use the Forgot Password link on the MSetu portal login page to reset your password.
+6) FORGOT PASSWORD
+Use the Forgot Password link on the MSetu portal login page to reset your password
 
-7) PO REPORT:
-To get the Purchase Order (PO) report:
-1. Go to the main Msetu chatbot.
-2. Type “PO Report”.
-3. The chatbot will ask you to enter your vendor code.
-4. Enter your vendor code and press Enter.
-Your PO report will be successfully obtained.
+7) PO REPORT
+To get the Purchase Order PO report
+Step 1 Go to the main Msetu chatbot
+Step 2 Type PO Report
+Step 3 The chatbot will ask you to enter your vendor code
+Step 4 Enter your vendor code and press Enter
+Your PO report will be successfully obtained
 
-8) PURCHASE ORDER REPORT:
-To get the Purchase Order report:
-1. Open the main Msetu chatbot.
-2. Type “PO Report” or “Purchase Order Report”.
-3. The chatbot will ask you to enter your vendor code.
-4. Enter your vendor code and press Enter.
-Your Purchase Order report will be successfully generated.
+8) PURCHASE ORDER REPORT
+To get the Purchase Order report
+Step 1 Open the main Msetu chatbot
+Step 2 Type PO Report or Purchase Order Report
+Step 3 The chatbot will ask you to enter your vendor code
+Step 4 Enter your vendor code and press Enter
+Your Purchase Order report will be successfully generated
 
-9) PAYMENT REPORT:
-To get the Payment Report:
-1. Go to the main Msetu chatbot.
-2. Type “Payment Report”.
-3. The chatbot will ask you to select a date range.
-4. Enter the required date range and press Enter.
-Your Payment Report for the selected period will be successfully generated.
-
-
+9) PAYMENT REPORT
+To get the Payment Report
+Step 1 Go to the main Msetu chatbot
+Step 2 Type Payment Report
+Step 3 The chatbot will ask you to select a date range
+Step 4 Enter the required date range and press Enter
+Your Payment Report for the selected period will be successfully generated
 `;
+
 
 
 const realtimeServer = new WebSocket.Server({ server, path: '/realtime' });
@@ -353,29 +333,26 @@ realtimeServer.on('connection', (clientWs, req) => {
       type: "session.update",
       session: {
         modalities: ["audio", "text"],
+        // voice: "verse",
         voice: "shimmer",
-instructions: `
-You are Cara, the Hindi-speaking voice assistant for the Msetu portal.
-
-IMPORTANT: GREETING OVERRIDE RULE
-If the user says only a greeting (hi, hello, hey, good morning, good evening, how are you, what's up),
-then you MUST reply exactly:
-"नमस्ते, मैं कारा हूँ। मैं आपकी किस प्रकार सहायता कर सकती हूँ?"
-This rule overrides ALL other rules.
+  instructions: `
+You are a strict domain-limited voice assistant.
 
 ${ALLOWED_KNOWLEDGE}
 
 ${ALLOWED_ANSWERS}
 
-STRICT RULES:
-1. You must ALWAYS use the official answers above, and you MAY translate them into Hindi.
-2. If the user's question does NOT match any allowed topics, reply in Hindi:
-   "क्षमा करें, यह प्रश्न Msetu से संबंधित नहीं है।"
-3. For greeting messages (as defined above), use ONLY the greeting override rule.
-4. Do NOT generate any new information outside the official list.
-5. Do NOT guess answers.
-6. Respond ONLY in Hindi.
+FINAL RULES:
+- Your responses MUST be interruptible.
+- If the user starts speaking while you're responding, immediately stop your response.
+- If the user greets → respond with: "Hello! How can I help you on the Msetu portal?"
+- If the question is related to allowed Msetu topics → give the official answer.
+- End every valid answer with: "Do you have any other query related to Msetu?"
+- If the question is unrelated → reply: "I'm sorry, but this question is not related to Msetu."
+- Keep all voice responses short, clear, and professional.
 `
+
+
 
 
       }
