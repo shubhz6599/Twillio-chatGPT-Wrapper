@@ -326,7 +326,7 @@ realtimeServer.on('connection', (clientWs, req) => {
     console.log('[proxy] OpenAI realtime WS connected for client');
 
     openaiReady = true;
-
+// deployment
     // send initial session update (adjust as needed)
     const initial = {
       type: "session.update",
