@@ -195,96 +195,95 @@ Allowed questions include:
 - email
 - phone
 - login
-- asn
+- asn validate
 - GST
 - Forgot Password
 - po report
 - purchase order report
 - payment report
+- asn create
 `;
 
 const ALLOWED_ANSWERS = `
-MSETU PORTAL OFFICIAL ANSWERS (Refined)
+MSETU PORTAL OFFICIAL ANSWERS (Refined):
 
-1) EMAIL
-To update your email address
-Step 1 Log in to the Msetu Portal
-Step 2 Go to the Dashboard or Main Menu
-Step 3 Click on the profile icon at the top right corner
-Step 4 In the user details popup update your email in the Email Address field
-Step 5 Click Save Changes
-Your email will be successfully updated
+1) EMAIL:
+To update your email address:
+1. Log in to the Msetu Portal.
+2. Go to the Dashboard or Main Menu.
+3. Click on the profile icon at the top-right corner.
+4. In the user details popup, update your email in the Email Address field.
+5. Click “Save Changes”.
+Your email will be successfully updated.
 
-2) PHONE
-To update your phone number
-Step 1 Log in to the Msetu Portal
-Step 2 Go to the Dashboard or Main Menu
-Step 3 Click on the profile icon in the top right corner
-Step 4 In the user details popup update your phone number in the Mobile Number field
-Step 5 Click Save Changes
-Your mobile number will be updated
+2) PHONE:
+To update your phone number:
+1. Log in to the Msetu Portal.
+2. Go to the Dashboard or Main Menu.
+3. Click on the profile icon in the top-right corner.
+4. In the user details popup, update your phone number in the Mobile Number field.
+5. Click “Save Changes”.
+Your mobile number will be updated.
 
-3) LOGIN
-To log in to the Msetu Portal
-Step 1 Open supplier dot mahindra dot com in your browser
-Step 2 Select the Msetu Login option
-Step 3 Choose either M&M User Login or Supplier User Login
-Step 4 Follow the onscreen instructions to complete the login process
+3) LOGIN:
+To log in to the Msetu Portal:
+1. Open supplier.mahindra.com in your browser.
+2. Select the “Msetu Login” option.
+3. Choose either “M&M User Login” or “Supplier User Login”.
+4. Follow the on-screen instructions to complete the login process.
 
-4) ASN
-To create an ASN
-Step 1 Log in to the Msetu Portal using your vendor code
-Step 2 On the landing page select the OE Supplies tab
-Step 3 Click on Transactions and Self Service Report
-Step 4 You will be redirected to the SRM Portal landing page Select OE Supplies again
-Step 5 Open the Self Service Page from the Transactions menu
-Step 6 The supplier self service page will open in a new tab
-Step 7 Download the ASN file format provided
-Step 8 While filling the file ensure
-   - Invoice and LR date must be in DDMMYYYY format
-   - Invoice should not be older than 3 months
-   - If excise amount is not applicable enter 0
-   - Enter dash in LR number if not available
-   - Remove packaging material columns if not required
-Step 9 Save the file in CSV format
-Step 10 Click Upload ASN then choose the file and upload it
-Your ASN will be successfully created
+4) ASN Validate:
+To validate your ASN file:
+1. Go to the main Msetu chatbot.
+2. Attach the ASN file that you want to validate.
+3. Type “ASN Validate”.
+The chatbot will validate your ASN file.
 
-5) GST
-To check M&M GSTN details
-Step 1 Log in to the Msetu Portal
-Step 2 Navigate to the GST Info section
-Step 3 Open the file named MnM GSTN Numbers PDF
-This file contains all official GST details
+5) GST:
+To check M&M GSTN details:
+1. Log in to the Msetu Portal.
+2. Navigate to the "GST Info" section.
+3. Open the file named “MnM GSTN Numbers.pdf”.
+This file contains all official GST details.
 
-6) FORGOT PASSWORD
-Use the Forgot Password link on the MSetu portal login page to reset your password
+6) FORGOT PASSWORD:
+Use the Forgot Password link on the MSetu portal login page to reset your password.
 
-7) PO REPORT
-To get the Purchase Order PO report
-Step 1 Go to the main Msetu chatbot
-Step 2 Type PO Report
-Step 3 The chatbot will ask you to enter your vendor code
-Step 4 Enter your vendor code and press Enter
-Your PO report will be successfully obtained
+7) PO REPORT:
+To get the Purchase Order (PO) report:
+1. Go to the main Msetu chatbot.
+2. Type “PO Report”.
+3. The chatbot will ask you to enter your vendor code.
+4. Enter your vendor code and press Enter.
+Your PO report will be successfully obtained.
 
-8) PURCHASE ORDER REPORT
-To get the Purchase Order report
-Step 1 Open the main Msetu chatbot
-Step 2 Type PO Report or Purchase Order Report
-Step 3 The chatbot will ask you to enter your vendor code
-Step 4 Enter your vendor code and press Enter
-Your Purchase Order report will be successfully generated
+8) PURCHASE ORDER REPORT:
+To get the Purchase Order report:
+1. Open the main Msetu chatbot.
+2. Type “PO Report” or “Purchase Order Report”.
+3. The chatbot will ask you to enter your vendor code.
+4. Enter your vendor code and press Enter.
+Your Purchase Order report will be successfully generated.
 
-9) PAYMENT REPORT
-To get the Payment Report
-Step 1 Go to the main Msetu chatbot
-Step 2 Type Payment Report
-Step 3 The chatbot will ask you to select a date range
-Step 4 Enter the required date range and press Enter
-Your Payment Report for the selected period will be successfully generated
+9) PAYMENT REPORT:
+To get the Payment Report:
+1. Go to the main Msetu chatbot.
+2. Type “Payment Report”.
+3. The chatbot will ask you to select a date range.
+4. Enter the required date range and press Enter.
+Your Payment Report for the selected period will be successfully generated.
+
+10) ASN CREATE:
+To create an ASN from a validated file:
+1. Go to the main Msetu chatbot.
+2. Attach your validated ASN file.
+3. Type “ASN Create”.
+4. The chatbot will validate the file and ask for confirmation to create asn.
+5. Click “OK” to proceed.
+Your ASN will be successfully created.
+
+
 `;
-
 
 
 const realtimeServer = new WebSocket.Server({ server, path: '/realtime' });
@@ -333,23 +332,32 @@ realtimeServer.on('connection', (clientWs, req) => {
       type: "session.update",
       session: {
         modalities: ["audio", "text"],
-        // voice: "verse",
         voice: "shimmer",
-  instructions: `
-You are a strict domain-limited voice assistant.
+        instructions: `
 
+        ### GREETING RULE
+If the user says only a greeting (hi, hello, hey, good morning, good evening),
+reply politely with a greeting and DO NOT apply the rejection rule.
+
+### ANSWERING RULE (IMPORTANT)
+You MUST reply using ONLY the exact answer text from ALLOWED_ANSWERS.
+Do NOT summarize.
+Do NOT shorten.
+Do NOT translate unless user speaks Hindi.
+Do NOT repeat the same line.
+Always output the FULL original answer exactly as written in ALLOWED_ANSWERS.
+
+### MATCHING RULE
+Match the user’s question to the closest section in ALLOWED_ANSWERS.
+
+If no match:
+Reply (in user's language):
+"Sorry, this query is not related to Msetu."
+
+### ALLOWED DATA
 ${ALLOWED_KNOWLEDGE}
-
 ${ALLOWED_ANSWERS}
 
-FINAL RULES:
-- Your responses MUST be interruptible.
-- If the user starts speaking while you're responding, immediately stop your response.
-- If the user greets → respond with: "Hello! How can I help you on the Msetu portal?"
-- If the question is related to allowed Msetu topics → give the official answer.
-- End every valid answer with: "Do you have any other query related to Msetu?"
-- If the question is unrelated → reply: "I'm sorry, but this question is not related to Msetu."
-- Keep all voice responses short, clear, and professional.
 `
 
 
