@@ -191,17 +191,35 @@ const REALTIME_URL =
   "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17";
 
 const ALLOWED_KNOWLEDGE = `
+You are Msetu portal assistant.
+
 Allowed questions include:
 - email
 - phone
 - login
-- asn validate
+- asn
 - GST
 - Forgot Password
 - po report
 - purchase order report
 - payment report
-- asn create
+
+
+GREETING RULE:
+If user only says:
+"hi", "hello", "hey", "good morning", "good evening", 
+"how are you", "what's up"
+
+→ Reply with a friendly greeting such as:
+"Hello! How can I help you on the Msetu portal?"
+
+Do NOT say the unrelated message for greetings.
+
+UNRELATED QUESTION RULE:
+If question is NOT about Msetu portal → reply:
+"I'm sorry, but this question is not related to Msetu."
+
+Below are the OFFICIAL answers you must use.
 `;
 
 const ALLOWED_ANSWERS = `
@@ -232,12 +250,24 @@ To log in to the Msetu Portal:
 3. Choose either “M&M User Login” or “Supplier User Login”.
 4. Follow the on-screen instructions to complete the login process.
 
-4) ASN Validate:
-To validate your ASN file:
-1. Go to the main Msetu chatbot.
-2. Attach the ASN file that you want to validate.
-3. Type “ASN Validate”.
-The chatbot will validate your ASN file.
+4) ASN:
+To create an ASN:
+1. Log in to the Msetu Portal using your vendor code.
+2. On the landing page, select the OE Supplies tab.
+3. Click on Transactions & Self Service Report.
+4. You will be redirected to the SRM Portal landing page. Select OE Supplies again.
+5. Open the Self Service Page from the Transactions menu.
+6. The supplier self-service page will open in a new tab.
+7. Download the ASN file format provided.
+8. While filling the file, ensure:
+   - Invoice & LR date must be in DD.MM.YYYY format.
+   - Invoice should not be older than 3 months.
+   - If excise amount is not applicable, enter 0.
+   - Enter * in LR number if not available.
+   - Remove packaging material columns if not required.
+9. Save the file in CSV format.
+10. Click “Upload ASN”, then choose the file and upload it.
+Your ASN will be successfully created.
 
 5) GST:
 To check M&M GSTN details:
@@ -272,15 +302,6 @@ To get the Payment Report:
 3. The chatbot will ask you to select a date range.
 4. Enter the required date range and press Enter.
 Your Payment Report for the selected period will be successfully generated.
-
-10) ASN CREATE:
-To create an ASN from a validated file:
-1. Go to the main Msetu chatbot.
-2. Attach your validated ASN file.
-3. Type “ASN Create”.
-4. The chatbot will validate the file and ask for confirmation to create asn.
-5. Click “OK” to proceed.
-Your ASN will be successfully created.
 
 
 `;
@@ -326,40 +347,35 @@ realtimeServer.on('connection', (clientWs, req) => {
     console.log('[proxy] OpenAI realtime WS connected for client');
 
     openaiReady = true;
+
     // send initial session update (adjust as needed)
     const initial = {
       type: "session.update",
       session: {
         modalities: ["audio", "text"],
         voice: "shimmer",
-        instructions: `
+instructions: `
+You are Cara, the Hindi-speaking voice assistant for the Msetu portal.
 
-        ### GREETING RULE
-If the user says only a greeting (hi, hello, hey, good morning, good evening),
-reply politely with a greeting and DO NOT apply the rejection rule.
+IMPORTANT: GREETING OVERRIDE RULE
+If the user says only a greeting (hi, hello, hey, good morning, good evening, how are you, what's up),
+then you MUST reply exactly:
+"नमस्ते, मैं कारा हूँ। मैं आपकी किस प्रकार सहायता कर सकती हूँ?"
+This rule overrides ALL other rules.
 
-### ANSWERING RULE (IMPORTANT)
-You MUST reply using ONLY the exact answer text from ALLOWED_ANSWERS.
-Do NOT summarize.
-Do NOT shorten.
-Do NOT translate unless user speaks Hindi.
-Do NOT repeat the same line.
-Always output the FULL original answer exactly as written in ALLOWED_ANSWERS.
-
-### MATCHING RULE
-Match the user’s question to the closest section in ALLOWED_ANSWERS.
-
-If no match:
-Reply (in user's language):
-"Sorry, this query is not related to Msetu."
-
-### ALLOWED DATA
 ${ALLOWED_KNOWLEDGE}
+
 ${ALLOWED_ANSWERS}
 
+STRICT RULES:
+1. You must ALWAYS use the official answers above, and you MAY translate them into Hindi.
+2. If the user's question does NOT match any allowed topics, reply in Hindi:
+   "क्षमा करें, यह प्रश्न Msetu से संबंधित नहीं है।"
+3. For greeting messages (as defined above), use ONLY the greeting override rule.
+4. Do NOT generate any new information outside the official list.
+5. Do NOT guess answers.
+6. Respond ONLY in Hindi.
 `
-
-
 
 
       }
