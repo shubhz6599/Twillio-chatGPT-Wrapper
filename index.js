@@ -252,10 +252,21 @@ To log in to the Msetu Portal:
 
 4) ASN:
 To create an ASN:
-1. Open Chatbot.
-2.Upload Your Asn File with respective prompt for creation or validation
-3. Chatbot will verify your file as per your prompt.
-4. If your file is valid then
+1. Log in to the Msetu Portal using your vendor code.
+2. On the landing page, select the OE Supplies tab.
+3. Click on Transactions & Self Service Report.
+4. You will be redirected to the SRM Portal landing page. Select OE Supplies again.
+5. Open the Self Service Page from the Transactions menu.
+6. The supplier self-service page will open in a new tab.
+7. Download the ASN file format provided.
+8. While filling the file, ensure:
+   - Invoice & LR date must be in DD.MM.YYYY format.
+   - Invoice should not be older than 3 months.
+   - If excise amount is not applicable, enter 0.
+   - Enter * in LR number if not available.
+   - Remove packaging material columns if not required.
+9. Save the file in CSV format.
+10. Click “Upload ASN”, then choose the file and upload it.
 Your ASN will be successfully created.
 
 5) GST:
@@ -363,6 +374,7 @@ STRICT RULES:
 3. For greeting messages (as defined above), use ONLY the greeting override rule.
 4. Do NOT generate any new information outside the official list.
 5. Do NOT guess answers.
+6. Always ask a follow up question after completing last answer , "is your query resolved? How May i help you on msetu portal."
 `
 
 
